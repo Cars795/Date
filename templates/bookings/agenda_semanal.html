@@ -1,0 +1,287 @@
+{% load extra_filters %}
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <title>Agenda</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <!-- Bootstrap + Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+
+  <style>
+    :root{
+      --brand:#005098; --info:#E5F1FB; --error:#EB5160; --muted:#889DB8; --title:#2E4052; --bg:#F5F6F7;
+      --status-pending:#fd7e14; --status-confirmed:#28a745; --status-cancelled:#dc3545; --status-done:#17a2b8;
+      --card-shadow:0 2px 6px rgba(0,0,0,.08); --radius:12px;
+    }
+    body{ background:var(--bg); }
+    h1,h2,h5{ color:var(--title); }
+    .card{ border-radius:var(--radius); box-shadow:var(--card-shadow); }
+
+    /* Mes */
+    .calendar-grid{ display:grid; grid-template-columns:repeat(7,1fr); gap:6px; }
+    .day-cell{ min-height:80px; padding:6px; border-radius:6px; background:#fff; border:1px solid #ddd; font-size:.85em; }
+    .day-cell:hover{ background:var(--info); cursor:pointer; }
+
+    /* Semana */
+    .calendar-week{ display:grid; grid-template-columns:100px repeat(7,1fr); }
+    .calendar-week .day-header{ background:var(--brand); color:#fff; text-align:center; padding:6px; }
+    .calendar-week .hour-cell{ border:1px solid #ddd; height:50px; padding:2px; font-size:.8em; }
+    .appointment{ border-radius:6px; padding:2px 6px; margin:1px; color:#fff; font-size:.75em; display:block; }
+    .pending{ background:var(--status-pending); }
+    .confirmed{ background:var(--status-confirmed); }
+    .cancelled{ background:var(--status-cancelled); }
+    .done{ background:var(--status-done); }
+
+    /* Día */
+    .apt-click{ cursor:pointer; }
+    .apt-click:hover{ background:#E5F1FB; border-radius:6px; }
+    .status-badge{
+      display:inline-flex; align-items:center; gap:.35rem;
+      padding:.25rem .55rem; border-radius:999px; font-size:.78rem; font-weight:600; color:#fff;
+    }
+    .status-pending{ background:#fd7e14; }
+    .status-confirmed{ background:#28a745; }
+    .status-cancelled{ background:#dc3545; }
+    .status-done{ background:#17a2b8; }
+  </style>
+</head>
+<body class="p-3">
+  <div class="container">
+    <h1 class="mb-4">Agenda</h1>
+
+    <!-- Selector de vista -->
+    <div class="btn-group mb-3" role="group" aria-label="Selector de vista">
+      <a href="?view=year"  class="btn btn-outline-primary {% if view == 'year'  %}active{% endif %}">Año</a>
+      <a href="?view=month" class="btn btn-outline-primary {% if view == 'month' %}active{% endif %}">Mes</a>
+      <a href="?view=week"  class="btn btn-outline-primary {% if view == 'week'  %}active{% endif %}">Semana</a>
+      <a href="?view=day"   class="btn btn-outline-primary {% if view == 'day'   %}active{% endif %}">Día</a>
+
+      {% if view != "day" or day != today %}
+        <a href="?view=day&date={{ today|date:'Y-m-d' }}" class="btn btn-success">📅 Ir a Hoy</a>
+      {% else %}
+        <a href="{% url 'bookings:create_appointment' %}?date={{ day|date:'Y-m-d' }}T09:00" class="btn btn-outline-success btn-sm">
+          <i class="bi bi-calendar-plus"></i> Agendar cita
+        </a>
+      {% endif %}
+    </div>
+
+    {# ======================= AÑO ======================= #}
+    {% if view == "year" %}
+      <h2 class="mb-3">Año {{ year }}</h2>
+      <div class="row">
+        {% for m in months %}
+          <div class="col-md-3 mb-3">
+            <div class="card shadow-sm position-relative">
+              <div class="card-body text-center">
+                <h5 class="mb-2">{{ m.name }}</h5>
+                <p class="text-muted mb-2">{{ m.count }} citas</p>
+                <a class="stretched-link" href="?view=month&year={{ m.year }}&month={{ m.month }}" aria-label="Ver {{ m.name }} {{ m.year }}"></a>
+              </div>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+
+    {# ======================= MES ======================= #}
+    {% elif view == "month" %}
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <a class="btn btn-outline-primary" href="?view=month&year={{ prev_month.year }}&month={{ prev_month.month }}">← Mes anterior</a>
+        <h2 class="mb-0">{{ month_name }} {{ year }}</h2>
+        <a class="btn btn-outline-primary" href="?view=month&year={{ next_month.year }}&month={{ next_month.month }}">Mes siguiente →</a>
+      </div>
+
+      <!-- Encabezados: L M M J V S D -->
+      <div class="calendar-grid mb-1">
+        <div class="text-center fw-semibold">L</div>
+        <div class="text-center fw-semibold">M</div>
+        <div class="text-center fw-semibold">M</div>
+        <div class="text-center fw-semibold">J</div>
+        <div class="text-center fw-semibold">V</div>
+        <div class="text-center fw-semibold">S</div>
+        <div class="text-center fw-semibold">D</div>
+      </div>
+
+      <div class="calendar-grid">
+        {% for d in days %}
+          <div class="day-cell">
+            <a href="?view=day&date={{ d }}" class="text-decoration-none" aria-label="Ver {{ d|date:'d/m/Y' }}">
+              <strong>{{ d|date:"d" }}</strong>
+            </a>
+            {% for a in citas %}
+              {% if a.start.date == d %}
+                <span class="badge bg-primary d-block mt-1">{{ a.client.name }}</span>
+              {% endif %}
+            {% endfor %}
+          </div>
+        {% endfor %}
+      </div>
+
+    {# ======================= DÍA ======================= #}
+    {% elif view == "day" %}
+      <h2 class="mb-3">Citas del {{ day|date:"d M Y" }}</h2>
+
+      <ul class="list-group">
+        {% for a in citas %}
+          <li class="list-group-item d-flex justify-content-between align-items-center">
+            <!-- Zona clickeable para editar -->
+            <div class="apt-click flex-grow-1 me-3"
+                 role="button" tabindex="0"
+                 data-href="{% url 'bookings:edit_appointment' a.pk %}?next={{ request.get_full_path|urlencode }}"
+                 title="Ver/editar cita">
+              <strong>{{ a.start|date:"H:i" }}</strong> — {{ a.client.name }} con {{ a.staff.name }}
+              <small class="text-muted d-block">{{ a.notes|default:"Sin notas" }}</small>
+
+              <span id="status-{{ a.pk }}" class="status-badge
+                {% if a.status == 'pending' %} status-pending
+                {% elif a.status == 'confirmed' %} status-confirmed
+                {% elif a.status == 'cancelled' %} status-cancelled
+                {% elif a.status == 'done' %} status-done
+                {% endif %}">
+                {{ a.get_status_display }}
+              </span>
+            </div>
+
+            <!-- Gestionar -->
+            <div class="btn-group">
+              <button type="button" class="btn btn-outline-primary btn-sm dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                📅 Gestionar
+              </button>
+              <ul class="dropdown-menu dropdown-menu-end">
+                <li>
+                  <button type="button" class="dropdown-item manage-action"
+                          data-url="{% url 'bookings:change_appointment_status' a.pk 'confirmed' %}"
+                          data-id="{{ a.pk }}" data-status="confirmed">
+                    <i class="bi bi-check2-circle"></i> Confirmar
+                  </button>
+                </li>
+                <li>
+                  <button type="button" class="dropdown-item manage-action"
+                          data-url="{% url 'bookings:change_appointment_status' a.pk 'cancelled' %}"
+                          data-id="{{ a.pk }}" data-status="cancelled">
+                    <i class="bi bi-x-circle"></i> Cancelar
+                  </button>
+                </li>
+                <li>
+                  <button type="button" class="dropdown-item manage-action"
+                          data-url="{% url 'bookings:change_appointment_status' a.pk 'done' %}"
+                          data-id="{{ a.pk }}" data-status="done">
+                    <i class="bi bi-stop-circle"></i> Atendida
+                  </button>
+                </li>
+                <li><hr class="dropdown-divider"></li>
+                <li>
+                  <button type="button" class="dropdown-item manage-action"
+                          data-url="{% url 'bookings:change_appointment_status' a.pk 'pending' %}"
+                          data-id="{{ a.pk }}" data-status="pending">
+                    <i class="bi bi-arrow-counterclockwise"></i> Volver a pendiente
+                  </button>
+                </li>
+              </ul>
+            </div>
+          </li>
+        {% empty %}
+          <li class="list-group-item">Sin citas</li>
+        {% endfor %}
+      </ul>
+
+    {# ======================= SEMANA ======================= #}
+    {% elif view == "week" %}
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <a href="?view=week&week={{ offset|add:' -1' }}" class="btn btn-outline-primary">← Semana anterior</a>
+        <h2 class="mb-0">{{ days.0|date:"d M Y" }} – {{ days.6|date:"d M Y" }}</h2>
+        <a href="?view=week&week={{ offset|add:' 1' }}" class="btn btn-outline-primary">Semana siguiente →</a>
+      </div>
+
+      <div class="calendar-week">
+        <div></div>
+        {% for d in days %}
+          <div class="day-header">{{ d|date:"D d" }}</div>
+        {% endfor %}
+
+        {% for h in hours %}
+          <div class="hour-cell text-end pe-2"><strong>{{ h }}:00</strong></div>
+          {% for d in days %}
+            <div class="hour-cell">
+              {% for a in citas_por_dia_hora|get_item:d|get_item:h %}
+                <span id="apt-{{ a.pk }}" class="appointment {{ a.status }}">{{ a.client.name }}</span>
+              {% endfor %}
+            </div>
+          {% endfor %}
+        {% endfor %}
+      </div>
+    {% endif %}
+  </div>
+
+  <!-- Bootstrap bundle -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+  <script>
+    // ===== Utilidades (csrf + clases estado) =====
+    (() => {
+      window.__agenda = window.__agenda || {};
+      function getCookie(name){
+        const v = `; ${document.cookie}`.split(`; ${name}=`); if (v.length===2) return v.pop().split(';').shift();
+      }
+      __agenda.csrftoken = getCookie('csrftoken');
+      __agenda.STATUS_LABEL = { pending:'Pendiente', confirmed:'Confirmada', cancelled:'Cancelada', done:'Atendida' };
+      __agenda.swapStatusClasses = (el,newStatus)=>{
+        el.classList.remove('status-pending','status-confirmed','status-cancelled','status-done');
+        el.classList.add('status-'+newStatus);
+      };
+    })();
+  </script>
+
+  <script>
+    // ===== Acciones AJAX (Gestionar en Día) =====
+    (() => {
+      document.addEventListener('click', async (e)=>{
+        const btn = e.target.closest('.manage-action');
+        if(!btn) return;
+        e.preventDefault();
+
+        const url = btn.dataset.url, id = btn.dataset.id, status = btn.dataset.status;
+        const badge = document.getElementById(`status-${id}`);
+        if(!url || !badge) return;
+
+        try{
+          const res = await fetch(url,{
+            method:'POST',
+            headers:{ 'X-CSRFToken': __agenda.csrftoken, 'X-Requested-With':'fetch' }
+          });
+          if(!res.ok) throw new Error('HTTP '+res.status);
+
+          badge.textContent = __agenda.STATUS_LABEL[status] || status;
+          __agenda.swapStatusClasses(badge, status);
+
+          const menu = btn.closest('.dropdown-menu');
+          if(menu){
+            menu.querySelectorAll('.manage-action').forEach(a=>{
+              a.classList.remove('disabled');
+              if(a.dataset.status===status) a.classList.add('disabled');
+            });
+          }
+        }catch(err){
+          console.error(err);
+          badge.textContent='Error';
+        }
+      });
+    })();
+  </script>
+
+  <script>
+    // Click/Enter en zona de texto abre edición (Día)
+    document.addEventListener('click',(e)=>{
+      const el = e.target.closest('.apt-click'); if(!el) return;
+      const url = el.dataset.href; if(url) window.location.href = url;
+    });
+    document.addEventListener('keydown',(e)=>{
+      if(e.key!=='Enter') return;
+      const el = e.target.closest('.apt-click'); if(!el) return;
+      const url = el.dataset.href; if(url) window.location.href = url;
+    });
+  </script>
+</body>
+</html>

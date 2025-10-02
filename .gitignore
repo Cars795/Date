@@ -1,0 +1,22 @@
+# Byte-compiled / Python stuff
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# Virtualenv
+.venv/
+env/
+ENV/
+
+# Django
+*.log
+local_settings.py
+db.sqlite3
+/media
+/staticfiles
+
+# VSCode
+.vscode/
+
+# PyCharm
+.idea/

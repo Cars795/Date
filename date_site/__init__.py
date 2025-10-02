@@ -1,0 +1,1 @@
+# package for Django project
