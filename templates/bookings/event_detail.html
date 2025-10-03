@@ -7,7 +7,11 @@
 </head>
 <body class="p-4">
   <div class="container">
-    <a href="{% url 'bookings:event_list' %}">← Volver</a>
+ 
+    <a href="{% url 'bookings:event_list' %}" class="btn btn-outline-secondary">
+      <i class="bi bi-arrow-left"></i> Volver al inicio
+    </a>
+
     <h1>{{ event.title }}</h1>
     <p>{{ event.description }}</p>
     <p><strong>Inicio:</strong> {{ event.start }}</p>

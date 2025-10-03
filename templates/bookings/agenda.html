@@ -1,336 +1,432 @@
 {% load extra_filters %}
 <!doctype html>
 <html lang="es">
+
 <head>
-  <meta charset="utf-8">
-  <title>Tablero diario de citas</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <!-- Bootstrap + Icons -->
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    <meta charset="utf-8">
+    <title>Tablero diario de citas</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <!-- Bootstrap + Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
 
-  <style>
-    :root{
-      --brand:#005098;
-      --bg-soft:#F5F6F7;
-      --status-pending:#fd7e14;
-      --status-confirmed:#28a745;
-      --status-cancelled:#dc3545;
-      --status-done:#17a2b8;
-    }
+    <style>
+        :root {
+            --brand: #005098;
+            --bg-soft: #F5F6F7;
+            --status-pending: #fd7e14;
+            --status-confirmed: #28a745;
+            --status-cancelled: #dc3545;
+            --status-done: #17a2b8;
+        }
 
-    body{ background:var(--bg-soft); }
-    .card-header{ background:var(--brand); color:#fff; font-weight:600; }
+        body {
+            background: var(--bg-soft);
+        }
 
-    /* Acordeón clickeable en toda la barra */
-    .header-toggle{ position:relative; cursor:pointer; }
-    .header-toggle .stretched-link{ position:absolute; inset:0; }
+        .card-header {
+            background: var(--brand);
+            color: #fff;
+            font-weight: 600;
+        }
 
-    /* Badges de estado */
-    .status-badge{ padding:.4em .7em; border-radius:12px; font-size:.8em; color:#fff; }
-    .status-pending{   background:var(--status-pending); }
-    .status-confirmed{ background:var(--status-confirmed); }
-    .status-cancelled{ background:var(--status-cancelled); }
-    .status-done{      background:var(--status-done); }
+        /* Acordeón clickeable en toda la barra */
+        .header-toggle {
+            position: relative;
+            cursor: pointer;
+        }
 
-    /* Botones compactos */
-    .btn-icon{ display:inline-flex; align-items:center; justify-content:center; gap:.35rem; }
-    .action-buttons .btn{ min-width:36px; height:30px; padding:0 .5rem; }
-    .action-buttons .btn i{ font-size:1rem; line-height:1; }
-    .action-buttons .btn.disabled{ pointer-events:auto; opacity:.45; }
+        .header-toggle .stretched-link {
+            position: absolute;
+            inset: 0;
+        }
 
-    /* Zona clic para abrir edición */
-    .apt-click{ cursor:pointer; border-radius:6px; }
-    .apt-click:hover{ background:#E5F1FB; }
+        /* Badges de estado */
+        .status-badge {
+            padding: .4em .7em;
+            border-radius: 12px;
+            font-size: .8em;
+            color: #fff;
+        }
 
-    /* Utilidades */
-    .visually-hidden-focusable:active,
-    .visually-hidden-focusable:focus{
-      position:static !important; width:auto; height:auto; margin:0; overflow:visible;
-      clip:auto; white-space:normal;
-    }
-  </style>
+        .status-pending {
+            background: var(--status-pending);
+        }
+
+        .status-confirmed {
+            background: var(--status-confirmed);
+        }
+
+        .status-cancelled {
+            background: var(--status-cancelled);
+        }
+
+        .status-done {
+            background: var(--status-done);
+        }
+
+        /* Botones compactos */
+        .btn-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: .35rem;
+        }
+
+        .action-buttons .btn {
+            min-width: 36px;
+            height: 30px;
+            padding: 0 .5rem;
+        }
+
+        .action-buttons .btn i {
+            font-size: 1rem;
+            line-height: 1;
+        }
+
+        .action-buttons .btn.disabled {
+            pointer-events: auto;
+            opacity: .45;
+        }
+
+        /* Zona clic para abrir edición */
+        .apt-click {
+            cursor: pointer;
+            border-radius: 6px;
+        }
+
+        .apt-click:hover {
+            background: #E5F1FB;
+        }
+
+        /* Utilidades */
+        .visually-hidden-focusable:active,
+        .visually-hidden-focusable:focus {
+            position: static !important;
+            width: auto;
+            height: auto;
+            margin: 0;
+            overflow: visible;
+            clip: auto;
+            white-space: normal;
+        }
+    </style>
 </head>
 
 <body class="p-4">
-  <div class="container">
+    <div class="container">
 
-    <!-- Encabezado -->
-    <div class="d-flex justify-content-between align-items-center mb-3">
-      <h2 class="mb-0">Tablero diario de citas — {{ day|date:"d M Y" }}</h2>
-      <a class="btn btn-outline-success btn-sm"
-         href="{% url 'bookings:create_appointment' %}?date={{ day|date:'Y-m-d' }}T09:00">
-        <i class="bi bi-calendar-plus"></i> Agendar cita
-      </a>
-    </div>
+        <!-- Encabezado -->
+        <div class="d-flex justify-content-between align-items-center mb-3">
 
-    <!-- Buscador -->
-    <div class="input-group mb-3">
-      <span class="input-group-text"><i class="bi bi-search"></i></span>
-      <input id="agendaSearch" type="search" class="form-control" placeholder="Buscar por cliente, notas u hora…">
-      <button id="agendaClear" class="btn btn-outline-secondary" type="button">Limpiar</button>
-    </div>
-
-    <!-- Listado por staff -->
-    {% for s in staff_list %}
-    <section class="card mb-4 shadow-sm staff-block">
-      <!-- Barra azul = trigger acordeón -->
-      <header class="card-header d-flex justify-content-between align-items-center header-toggle"
-              data-bs-toggle="collapse" data-bs-target="#staff-{{ s.id }}"
-              aria-expanded="true" aria-controls="staff-{{ s.id }}">
-        <div class="fw-semibold">{{ s.role }} — {{ s.name }}</div>
-
-        {# Contador "atendidas de totales" con staff_counters (recomendado) #}
-        {% if staff_counters %}
-          {% with c=staff_counters|get_item:s.id %}
-            <span class="badge bg-light text-dark" title="Atendidas de totales">
-              {{ c.done }} de {{ c.total }}
-            </span>
-          {% endwith %}
-        {% else %}
-          {# Fallback simple si no se pasa staff_counters #}
-          <span class="badge bg-light text-dark">
-            {{ s.appointment_set.all|length }} de {{ s.appointment_set.all|length }}
-          </span>
-        {% endif %}
-
-        <a class="stretched-link" href="#" aria-label="Alternar sección de {{ s.name }}"></a>
-      </header>
-
-      <div id="staff-{{ s.id }}" class="collapse show">
-        <div class="list-group list-group-flush">
-          {% for a in s.appointment_set.all %}
-          <article class="list-group-item d-flex justify-content-between align-items-center appointment-item"
-                   data-search="{{ a.start|date:'H:i' }} {{ a.client.name }} {{ a.notes|default:'Sin notas' }}">
-            <!-- Área clic: abre edición -->
-            <div class="apt-click flex-grow-1 me-3"
-                 role="button" tabindex="0"
-                 data-href="{% url 'bookings:edit_appointment' a.pk %}?next={{ request.get_full_path|urlencode }}"
-                 title="Ver/editar cita">
-              <strong>{{ a.start|date:"H:i" }}</strong> — {{ a.client.name }}
-              <small class="text-muted d-block">{{ a.notes|default:"Sin notas" }}</small>
+            
+            {# Encabezado del tablero diario #}
+            {% with the_day=day|default:today %}
+              <div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
+    <div class="page-header">
+        <div class="mb-2">
+          <a href="/" class="btn btn-outline-secondary btn-back">
+            <i class="bi bi-arrow-left"></i> Volver
+          </a>
+        </div>
+        <h2 class="mb-0">
+            {% if the_day == today %}Hoy — {% endif %}
+            {{ the_day|date:"l, j \\d\\e F \\d\\e Y" }}
+          </h2>
+      
+          {# Subtítulo opcional: semana y conteo #}
+          {% if citas %}
+            <div class="text-muted small">
+              Semana {{ the_day|date:"W" }} • {{ citas|length }} cita{% if citas|length != 1 %}s{% endif %}
             </div>
+          {% endif %}
+      </div>
+   
+               
+              </div>
+            {% endwith %}
+            
 
-            <!-- Estado + acciones -->
-            <div class="d-flex align-items-center">
-              <span id="status-{{ a.pk }}" class="status-badge
+
+
+
+
+ <a class="btn btn-outline-success btn-sm"
+                href="{% url 'bookings:create_appointment' %}?date={{ day|date:'Y-m-d' }}T09:00">
+                <i class="bi bi-calendar-plus"></i> Agendar cita
+            </a>
+        </div>
+
+        <!-- Buscador -->
+        <div class="input-group mb-3">
+            <span class="input-group-text"><i class="bi bi-search"></i></span>
+            <input id="agendaSearch" type="search" class="form-control" placeholder="Buscar por cliente, notas u hora…">
+            <button id="agendaClear" class="btn btn-outline-secondary" type="button">Limpiar</button>
+        </div>
+
+        <!-- Listado por staff -->
+        {% for s in staff_list %}
+        <section class="card mb-4 shadow-sm staff-block">
+            <!-- Barra azul = trigger acordeón -->
+            <header class="card-header d-flex justify-content-between align-items-center header-toggle"
+                data-bs-toggle="collapse" data-bs-target="#staff-{{ s.id }}" aria-expanded="true"
+                aria-controls="staff-{{ s.id }}">
+                <div class="fw-semibold">{{ s.role }} — {{ s.name }}</div>
+
+                {# Contador "atendidas de totales" con staff_counters (recomendado) #}
+                {% if staff_counters %}
+                {% with c=staff_counters|get_item:s.id %}
+                <span class="badge bg-light text-dark" title="Atendidas de totales">
+                    {{ c.done }} de {{ c.total }}
+                </span>
+                {% endwith %}
+                {% else %}
+                {# Fallback simple si no se pasa staff_counters #}
+                <span class="badge bg-light text-dark">
+                    {{ s.appointment_set.all|length }} de {{ s.appointment_set.all|length }}
+                </span>
+                {% endif %}
+
+                <a class="stretched-link" href="#" aria-label="Alternar sección de {{ s.name }}"></a>
+            </header>
+
+            <div id="staff-{{ s.id }}" class="collapse show">
+                <div class="list-group list-group-flush">
+                    {% for a in s.appointment_set.all %}
+                    <article class="list-group-item d-flex justify-content-between align-items-center appointment-item"
+                        data-search="{{ a.start|date:'H:i' }} {{ a.client.name }} {{ a.notes|default:'Sin notas' }}">
+                        <!-- Área clic: abre edición -->
+                        <div class="apt-click flex-grow-1 me-3" role="button" tabindex="0"
+                            data-href="{% url 'bookings:edit_appointment' a.pk %}?next={{ request.get_full_path|urlencode }}"
+                            title="Ver/editar cita">
+                            <strong>{{ a.start|date:"H:i" }}</strong> — {{ a.client.name }}
+                            <small class="text-muted d-block">{{ a.notes|default:"Sin notas" }}</small>
+                        </div>
+
+                        <!-- Estado + acciones -->
+                        <div class="d-flex align-items-center">
+                            <span id="status-{{ a.pk }}" class="status-badge
                 {% if a.status == 'pending' %} status-pending
                 {% elif a.status == 'confirmed' %} status-confirmed
                 {% elif a.status == 'cancelled' %} status-cancelled
                 {% elif a.status == 'done' %} status-done
                 {% endif %}">
-                {{ a.get_status_display }}
-              </span>
+                                {{ a.get_status_display }}
+                            </span>
 
-              <div class="btn-group btn-group-sm ms-2 action-buttons" role="group" aria-label="Acciones de cita">
-                <!-- Confirmar -->
-                <a class="btn btn-outline-success btn-icon ajax-status {% if a.status == 'confirmed' %}disabled{% endif %}"
-                   href="{% url 'bookings:change_appointment_status' a.pk 'confirmed' %}"
-                   data-url="{% url 'bookings:change_appointment_status' a.pk 'confirmed' %}"
-                   data-id="{{ a.pk }}" data-status="confirmed"
-                   data-bs-toggle="tooltip" data-bs-title="Confirmar" aria-label="Confirmar">
-                  <i class="bi bi-check2-circle"></i>
-                </a>
-                <!-- Cancelar -->
-                <a class="btn btn-outline-danger btn-icon ajax-status {% if a.status == 'cancelled' %}disabled{% endif %}"
-                   href="{% url 'bookings:change_appointment_status' a.pk 'cancelled' %}"
-                   data-url="{% url 'bookings:change_appointment_status' a.pk 'cancelled' %}"
-                   data-id="{{ a.pk }}" data-status="cancelled"
-                   data-bs-toggle="tooltip" data-bs-title="Cancelar" aria-label="Cancelar">
-                  <i class="bi bi-x-circle"></i>
-                </a>
-                <!-- Atendida -->
-                <a class="btn btn-outline-info btn-icon ajax-status {% if a.status == 'done' %}disabled{% endif %}"
-                   href="{% url 'bookings:change_appointment_status' a.pk 'done' %}"
-                   data-url="{% url 'bookings:change_appointment_status' a.pk 'done' %}"
-                   data-id="{{ a.pk }}" data-status="done"
-                   data-bs-toggle="tooltip" data-bs-title="Atendida" aria-label="Atendida">
-                  <i class="bi bi-stop-circle"></i>
-                </a>
-                <!-- Volver a pendiente -->
-                <a class="btn btn-outline-secondary btn-icon ajax-status {% if a.status == 'pending' %}disabled{% endif %}"
-                   href="{% url 'bookings:change_appointment_status' a.pk 'pending' %}"
-                   data-url="{% url 'bookings:change_appointment_status' a.pk 'pending' %}"
-                   data-id="{{ a.pk }}" data-status="pending"
-                   data-bs-toggle="tooltip" data-bs-title="Volver a pendiente" aria-label="Volver a pendiente">
-                  <i class="bi bi-arrow-counterclockwise"></i>
-                </a>
-              </div>
+                            <div class="btn-group btn-group-sm ms-2 action-buttons" role="group"
+                                aria-label="Acciones de cita">
+                                <!-- Confirmar -->
+                                <a class="btn btn-outline-success btn-icon ajax-status {% if a.status == 'confirmed' %}disabled{% endif %}"
+                                    href="{% url 'bookings:change_appointment_status' a.pk 'confirmed' %}"
+                                    data-url="{% url 'bookings:change_appointment_status' a.pk 'confirmed' %}"
+                                    data-id="{{ a.pk }}" data-status="confirmed" data-bs-toggle="tooltip"
+                                    data-bs-title="Confirmar" aria-label="Confirmar">
+                                    <i class="bi bi-check2-circle"></i>
+                                </a>
+                                <!-- Cancelar -->
+                                <a class="btn btn-outline-danger btn-icon ajax-status {% if a.status == 'cancelled' %}disabled{% endif %}"
+                                    href="{% url 'bookings:change_appointment_status' a.pk 'cancelled' %}"
+                                    data-url="{% url 'bookings:change_appointment_status' a.pk 'cancelled' %}"
+                                    data-id="{{ a.pk }}" data-status="cancelled" data-bs-toggle="tooltip"
+                                    data-bs-title="Cancelar" aria-label="Cancelar">
+                                    <i class="bi bi-x-circle"></i>
+                                </a>
+                                <!-- Atendida -->
+                                <a class="btn btn-outline-info btn-icon ajax-status {% if a.status == 'done' %}disabled{% endif %}"
+                                    href="{% url 'bookings:change_appointment_status' a.pk 'done' %}"
+                                    data-url="{% url 'bookings:change_appointment_status' a.pk 'done' %}"
+                                    data-id="{{ a.pk }}" data-status="done" data-bs-toggle="tooltip"
+                                    data-bs-title="Atendida" aria-label="Atendida">
+                                    <i class="bi bi-stop-circle"></i>
+                                </a>
+                                <!-- Volver a pendiente -->
+                                <a class="btn btn-outline-secondary btn-icon ajax-status {% if a.status == 'pending' %}disabled{% endif %}"
+                                    href="{% url 'bookings:change_appointment_status' a.pk 'pending' %}"
+                                    data-url="{% url 'bookings:change_appointment_status' a.pk 'pending' %}"
+                                    data-id="{{ a.pk }}" data-status="pending" data-bs-toggle="tooltip"
+                                    data-bs-title="Volver a pendiente" aria-label="Volver a pendiente">
+                                    <i class="bi bi-arrow-counterclockwise"></i>
+                                </a>
+                            </div>
+                        </div>
+                    </article>
+                    {% empty %}
+                    <div class="list-group-item text-muted">Sin citas.</div>
+                    {% endfor %}
+                </div>
             </div>
-          </article>
-          {% empty %}
-            <div class="list-group-item text-muted">Sin citas.</div>
-          {% endfor %}
-        </div>
-      </div>
-    </section>
-    {% empty %}
-      <p class="alert alert-warning">No hay staff registrado.</p>
-    {% endfor %}
-  </div>
-
-  <!-- Toast -->
-  <div class="toast-container position-fixed top-0 end-0 p-3" style="z-index:2000">
-    <div id="liveToast" class="toast align-items-center border-0" role="alert" aria-live="assertive" aria-atomic="true">
-      <div class="d-flex">
-        <div id="toast-body" class="toast-body">Operación realizada</div>
-        <button type="button" class="btn-close me-2 m-auto" data-bs-dismiss="toast" aria-label="Cerrar"></button>
-      </div>
+        </section>
+        {% empty %}
+        <p class="alert alert-warning">No hay staff registrado.</p>
+        {% endfor %}
     </div>
-  </div>
 
-  <!-- Bootstrap bundle -->
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Toast -->
+    <div class="toast-container position-fixed top-0 end-0 p-3" style="z-index:2000">
+        <div id="liveToast" class="toast align-items-center border-0" role="alert" aria-live="assertive"
+            aria-atomic="true">
+            <div class="d-flex">
+                <div id="toast-body" class="toast-body">Operación realizada</div>
+                <button type="button" class="btn-close me-2 m-auto" data-bs-dismiss="toast"
+                    aria-label="Cerrar"></button>
+            </div>
+        </div>
+    </div>
 
-  <script>
-  // ===== Módulo: utilidades (CSRF, normalizador, toast, clases) =====
-  (() => {
-    window.__agenda = window.__agenda || {};
+    <!-- Bootstrap bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
-    // CSRF
-    function getCookie(name){
-      const v = `; ${document.cookie}`.split(`; ${name}=`);
-      if (v.length === 2) return v.pop().split(';').shift();
-    }
-    __agenda.csrftoken = getCookie('csrftoken');
+    <script>
+        // ===== Módulo: utilidades (CSRF, normalizador, toast, clases) =====
+        (() => {
+            window.__agenda = window.__agenda || {};
 
-    // Normalizador para búsqueda
-    __agenda.norm = s => (s||'').toString().normalize('NFD').replace(/\p{Diacritic}/gu,'').toLowerCase();
+            // CSRF
+            function getCookie(name) {
+                const v = `; ${document.cookie}`.split(`; ${name}=`);
+                if (v.length === 2) return v.pop().split(';').shift();
+            }
+            __agenda.csrftoken = getCookie('csrftoken');
 
-    // Labels estado y cambio de clases
-    __agenda.STATUS_LABEL = { pending:'Pendiente', confirmed:'Confirmada', cancelled:'Cancelada', done:'Atendida' };
-    __agenda.swapStatusClasses = (el,newStatus)=>{
-      el.classList.remove('status-pending','status-confirmed','status-cancelled','status-done');
-      el.classList.add('status-'+newStatus);
-    };
+            // Normalizador para búsqueda
+            __agenda.norm = s => (s || '').toString().normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase();
 
-    // Toast
-    const toastEl = document.getElementById('liveToast');
-    const toastBody = document.getElementById('toast-body');
-    const toast = toastEl ? new bootstrap.Toast(toastEl,{delay:2200}) : null;
-    __agenda.showToast = (message,variant)=>{
-      if(!toast) return;
-      toastEl.className = 'toast align-items-center border-0 text-bg-' + (variant||'success');
-      toastBody.textContent = message;
-      toast.show();
-    };
-  })();
-  </script>
+            // Labels estado y cambio de clases
+            __agenda.STATUS_LABEL = { pending: 'Pendiente', confirmed: 'Confirmada', cancelled: 'Cancelada', done: 'Atendida' };
+            __agenda.swapStatusClasses = (el, newStatus) => {
+                el.classList.remove('status-pending', 'status-confirmed', 'status-cancelled', 'status-done');
+                el.classList.add('status-' + newStatus);
+            };
 
-  <script>
-  // ===== Módulo: Inicialización UI (tooltips) =====
-  (() => {
-    document.addEventListener('DOMContentLoaded', () => {
-      document.querySelectorAll('[data-bs-toggle="tooltip"]')
-        .forEach(el => new bootstrap.Tooltip(el, { container: 'body' }));
-    });
-  })();
-  </script>
+            // Toast
+            const toastEl = document.getElementById('liveToast');
+            const toastBody = document.getElementById('toast-body');
+            const toast = toastEl ? new bootstrap.Toast(toastEl, { delay: 2200 }) : null;
+            __agenda.showToast = (message, variant) => {
+                if (!toast) return;
+                toastEl.className = 'toast align-items-center border-0 text-bg-' + (variant || 'success');
+                toastBody.textContent = message;
+                toast.show();
+            };
+        })();
+    </script>
 
-  <script>
-  // ===== Módulo: Acciones AJAX de estado =====
-  (() => {
-    document.addEventListener('click', async (e) => {
-      const btn = e.target.closest('.ajax-status');
-      if (!btn) return;
+    <script>
+        // ===== Módulo: Inicialización UI (tooltips) =====
+        (() => {
+            document.addEventListener('DOMContentLoaded', () => {
+                document.querySelectorAll('[data-bs-toggle="tooltip"]')
+                    .forEach(el => new bootstrap.Tooltip(el, { container: 'body' }));
+            });
+        })();
+    </script>
 
-      e.preventDefault();
-      if (btn.classList.contains('disabled')) return;
+    <script>
+        // ===== Módulo: Acciones AJAX de estado =====
+        (() => {
+            document.addEventListener('click', async (e) => {
+                const btn = e.target.closest('.ajax-status');
+                if (!btn) return;
 
-      const url = btn.dataset.url || btn.getAttribute('href');
-      const id = btn.dataset.id;
-      const newStatus = btn.dataset.status;
-      const badge = document.getElementById(`status-${id}`);
+                e.preventDefault();
+                if (btn.classList.contains('disabled')) return;
 
-      try {
-        const res = await fetch(url, {
-          method: 'POST',
-          headers: { 'X-CSRFToken': __agenda.csrftoken, 'X-Requested-With': 'fetch' }
-        });
+                const url = btn.dataset.url || btn.getAttribute('href');
+                const id = btn.dataset.id;
+                const newStatus = btn.dataset.status;
+                const badge = document.getElementById(`status-${id}`);
 
-        if (!res.ok) {
-          const msg = (await res.text()) || 'No se pudo actualizar el estado.';
-          __agenda.showToast(msg, 'danger');
-          return;
-        }
+                try {
+                    const res = await fetch(url, {
+                        method: 'POST',
+                        headers: { 'X-CSRFToken': __agenda.csrftoken, 'X-Requested-With': 'fetch' }
+                    });
 
-        if (badge && newStatus) {
-          badge.textContent = __agenda.STATUS_LABEL[newStatus] || newStatus;
-          __agenda.swapStatusClasses(badge, newStatus);
-        }
+                    if (!res.ok) {
+                        const msg = (await res.text()) || 'No se pudo actualizar el estado.';
+                        __agenda.showToast(msg, 'danger');
+                        return;
+                    }
 
-        const group = btn.closest('.action-buttons');
-        if (group && newStatus) {
-          group.querySelectorAll('[data-status]').forEach(el => {
-            el.classList.remove('disabled');
-            if (el.dataset.status === newStatus) el.classList.add('disabled');
-          });
-        }
+                    if (badge && newStatus) {
+                        badge.textContent = __agenda.STATUS_LABEL[newStatus] || newStatus;
+                        __agenda.swapStatusClasses(badge, newStatus);
+                    }
 
-        __agenda.showToast('Estado actualizado a ' + (__agenda.STATUS_LABEL[newStatus] || newStatus), 'success');
+                    const group = btn.closest('.action-buttons');
+                    if (group && newStatus) {
+                        group.querySelectorAll('[data-status]').forEach(el => {
+                            el.classList.remove('disabled');
+                            if (el.dataset.status === newStatus) el.classList.add('disabled');
+                        });
+                    }
 
-      } catch (err) {
-        console.error(err);
-        __agenda.showToast('Error de red al actualizar.', 'danger');
-      }
-    });
-  })();
-  </script>
+                    __agenda.showToast('Estado actualizado a ' + (__agenda.STATUS_LABEL[newStatus] || newStatus), 'success');
 
-  <script>
-  // ===== Módulo: Buscador en vivo =====
-  (() => {
-    const q = document.getElementById('agendaSearch');
-    const clear = document.getElementById('agendaClear');
-    if (!q || !clear) return;
+                } catch (err) {
+                    console.error(err);
+                    __agenda.showToast('Error de red al actualizar.', 'danger');
+                }
+            });
+        })();
+    </script>
 
-    const items = Array.from(document.querySelectorAll('.appointment-item'));
-    const staffBlocks = Array.from(document.querySelectorAll('.staff-block'));
+    <script>
+        // ===== Módulo: Buscador en vivo =====
+        (() => {
+            const q = document.getElementById('agendaSearch');
+            const clear = document.getElementById('agendaClear');
+            if (!q || !clear) return;
 
-    // Completa data-search si no vino del template
-    items.forEach(li => { if (!li.dataset.search) li.dataset.search = li.textContent; });
+            const items = Array.from(document.querySelectorAll('.appointment-item'));
+            const staffBlocks = Array.from(document.querySelectorAll('.staff-block'));
 
-    function applyFilter(){
-      const term = __agenda.norm(q.value.trim());
+            // Completa data-search si no vino del template
+            items.forEach(li => { if (!li.dataset.search) li.dataset.search = li.textContent; });
 
-      items.forEach(li => {
-        const hit = __agenda.norm(li.dataset.search).includes(term);
-        li.classList.toggle('d-none', !!term && !hit);
-      });
+            function applyFilter() {
+                const term = __agenda.norm(q.value.trim());
 
-      // Oculta tarjetas de staff sin resultados visibles y abre acordeón mientras filtras
-      staffBlocks.forEach(block => {
-        const visible = block.querySelectorAll('.appointment-item:not(.d-none)').length;
-        block.classList.toggle('d-none', !!term && visible === 0);
-        const collapse = block.querySelector('.collapse');
-        if (collapse && term) new bootstrap.Collapse(collapse, { show:true });
-      });
-    }
+                items.forEach(li => {
+                    const hit = __agenda.norm(li.dataset.search).includes(term);
+                    li.classList.toggle('d-none', !!term && !hit);
+                });
 
-    q.addEventListener('input', applyFilter);
-    clear.addEventListener('click', () => { q.value=''; applyFilter(); q.focus(); });
-  })();
-  </script>
+                // Oculta tarjetas de staff sin resultados visibles y abre acordeón mientras filtras
+                staffBlocks.forEach(block => {
+                    const visible = block.querySelectorAll('.appointment-item:not(.d-none)').length;
+                    block.classList.toggle('d-none', !!term && visible === 0);
+                    const collapse = block.querySelector('.collapse');
+                    if (collapse && term) new bootstrap.Collapse(collapse, { show: true });
+                });
+            }
 
-  <script>
-  // ===== Módulo: Navegación a edición (clic y Enter) =====
-  (() => {
-    function goEdit(target){
-      const url = target?.dataset?.href;
-      if (url) window.location.href = url;
-    }
+            q.addEventListener('input', applyFilter);
+            clear.addEventListener('click', () => { q.value = ''; applyFilter(); q.focus(); });
+        })();
+    </script>
 
-    document.addEventListener('click', (e) => {
-      const target = e.target.closest('.apt-click');
-      if (target) goEdit(target);
-    });
+    <script>
+        // ===== Módulo: Navegación a edición (clic y Enter) =====
+        (() => {
+            function goEdit(target) {
+                const url = target?.dataset?.href;
+                if (url) window.location.href = url;
+            }
 
-    document.addEventListener('keydown', (e) => {
-      if (e.key !== 'Enter') return;
-      const target = e.target.closest('.apt-click');
-      if (target) goEdit(target);
-    });
-  })();
-  </script>
+            document.addEventListener('click', (e) => {
+                const target = e.target.closest('.apt-click');
+                if (target) goEdit(target);
+            });
+
+            document.addEventListener('keydown', (e) => {
+                if (e.key !== 'Enter') return;
+                const target = e.target.closest('.apt-click');
+                if (target) goEdit(target);
+            });
+        })();
+    </script>
 </body>
+
 </html>
