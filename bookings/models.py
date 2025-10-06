@@ -1,6 +1,8 @@
 from django.db import models
 from django.contrib.auth import get_user_model
 from django.conf import settings
+from django.db.models import Q
+from django.contrib.auth.models import User
 
 
 User = get_user_model()
@@ -11,39 +13,51 @@ class EventType(models.Model):
 
     def __str__(self):
         return self.name
-
+ 
 class Event(models.Model):
-    type = models.ForeignKey(EventType, on_delete=models.PROTECT)
+    type = models.ForeignKey("EventType", on_delete=models.PROTECT)
     title = models.CharField(max_length=200)
     description = models.TextField(blank=True)
     start = models.DateTimeField()
     capacity = models.PositiveIntegerField(default=1)
-    organizer = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    organizer = models.ForeignKey("auth.User", on_delete=models.SET_NULL, null=True, blank=True)
 
-    def __str__(self):
-        return f"{self.title} — {self.start}"
+    # NUEVOS CAMPOS
+    allow_group_booking = models.BooleanField(default=False)
+    max_tickets_per_booking = models.PositiveIntegerField(default=1)
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(
+                check=Q(allow_group_booking=False) | Q(max_tickets_per_booking__gte=1),
+                name="valid_group_booking_limit"
+            ),
+        ]
 
     @property
     def seats_taken(self):
-        return self.bookings.filter(cancelled=False).count()
+        return self.bookings.filter(cancelled=False).aggregate(models.Sum("quantity"))["quantity__sum"] or 0
 
     @property
     def seats_available(self):
         return max(0, self.capacity - self.seats_taken)
 
-class Booking(models.Model):
-    event = models.ForeignKey(Event, related_name='bookings', on_delete=models.CASCADE)
-    name = models.CharField(max_length=200)
-    email = models.EmailField()
-    phone = models.CharField(max_length=30, blank=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    cancelled = models.BooleanField(default=False)
 
-    class Meta:
-        ordering = ['-created_at']
+class Booking(models.Model):
+    event = models.ForeignKey("Event", on_delete=models.CASCADE, related_name="bookings")
+    name = models.CharField(max_length=150)
+    email = models.EmailField()
+    phone = models.CharField(max_length=50)
+    quantity = models.PositiveIntegerField(default=1)  # 👈 nuevo campo
+    cancelled = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"{self.name} - {self.event.title}"
+        return f"{self.name} ({self.event.title})"
+
+    class Meta:
+        ordering = ["-created_at"]
+
 
 class Staff(models.Model):
     name = models.CharField(max_length=100)

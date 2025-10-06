@@ -13,18 +13,23 @@ class EventListView(ListView):
 
 def event_detail(request, pk):
     event = get_object_or_404(Event, pk=pk)
-    form = BookingForm(request.POST or None)
-    if request.method == 'POST':
-        if event.seats_available <= 0:
-            messages.error(request, "No hay lugares disponibles.")
-            return redirect(reverse('bookings:event_detail', args=[event.pk]))
+
+    if request.method == "POST":
+        form = BookingForm(request.POST, event=event)
         if form.is_valid():
             booking = form.save(commit=False)
             booking.event = event
             booking.save()
-            messages.success(request, "Reserva creada correctamente.")
-            return redirect(reverse('bookings:booking_success', args=[booking.pk]))
-    return render(request, 'bookings/event_detail.html', {'event': event, 'form': form})
+            messages.success(request, "Reserva realizada con éxito.")
+            return redirect("bookings:event_list")
+    else:
+        form = BookingForm(event=event)
+
+    return render(request, "bookings/event_detail.html", {
+        "event": event,
+        "form": form,
+    })
+
 
 def booking_success(request, pk):
     from .models import Booking

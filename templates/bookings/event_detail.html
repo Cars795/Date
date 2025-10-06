@@ -1,32 +1,97 @@
+{% load widget_tweaks %}
 <!doctype html>
-<html>
+<html lang="es">
 <head>
   <meta charset="utf-8">
   <title>{{ event.title }}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+
+  <style>
+    body { background:#f7f8fa; }
+    .event-card {
+      background:#fff; border-radius:12px; box-shadow:0 2px 10px rgba(0,0,0,.08);
+      overflow:hidden;
+    }
+    .event-header { background:#005098; color:#fff; padding:1rem 1.5rem; }
+    .event-body { padding:1.5rem; }
+    .form-section { border-left:1px solid #e2e6ea; background:#fdfdfd; }
+    @media (max-width: 768px){
+      .form-section{ border-left:none; border-top:1px solid #e2e6ea; }
+    }
+  </style>
 </head>
-<body class="p-4">
-  <div class="container">
- 
-    <a href="{% url 'bookings:event_list' %}" class="btn btn-outline-secondary">
-      <i class="bi bi-arrow-left"></i> Volver al inicio
-    </a>
 
-    <h1>{{ event.title }}</h1>
-    <p>{{ event.description }}</p>
-    <p><strong>Inicio:</strong> {{ event.start }}</p>
-    <p><strong>Disponibles:</strong> {{ event.seats_available }}</p>
+<body class="p-3">
+  <div class="container" style="max-width:1100px;">
+    
+    <div class="mb-3">
+      <a href="{% url 'bookings:event_list' %}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Volver a eventos
+      </a>
+    </div>
 
-    {% if event.seats_available > 0 %}
-      <h4>Reservar</h4>
-      <form method="post">
-        {% csrf_token %}
-        {{ form.as_p }}
-        <button class="btn btn-success" type="submit">Confirmar reserva</button>
-      </form>
-    {% else %}
-      <div class="alert alert-warning">Evento lleno.</div>
-    {% endif %}
+    <div class="row g-0 event-card">
+      <!-- IZQUIERDA: info del evento -->
+      <div class="col-md-6">
+        <div class="event-header">
+          <h2 class="mb-0">{{ event.title }}</h2>
+        </div>
+        <div class="event-body">
+          <p class="text-muted mb-1"><i class="bi bi-calendar2-week"></i> 
+            <strong>Inicio:</strong> {{ event.start|date:"l, d \\de F \\de Y, H:i" }}
+          </p>
+          <p class="text-muted mb-3">
+            <i class="bi bi-people"></i> <strong>Disponibles:</strong> {{ event.seats_available }} /
+            {{ event.capacity }}
+          </p>
+          <p>{{ event.description|linebreaksbr }}</p>
+        </div>
+      </div>
+
+      <!-- DERECHA: formulario de reserva -->
+      <div class="col-md-6 form-section">
+        <div class="event-body">
+          {% if event.seats_available > 0 %}
+            <h5 class="mb-3">Reservar lugar{% if event.allow_group_booking %}es{% endif %}</h5>
+            <form method="post" class="row g-3" novalidate>
+              {% csrf_token %}
+              <div class="col-md-6">
+                <label class="form-label">Nombre completo</label>
+                {{ form.name|add_class:"form-control" }}
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">Correo electrónico</label>
+                {{ form.email|add_class:"form-control" }}
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">Teléfono</label>
+                {{ form.phone|add_class:"form-control" }}
+              </div>
+
+              {% if event.allow_group_booking %}
+              <div class="col-md-6">
+                <label class="form-label">Cantidad</label>
+                {{ form.quantity|add_class:"form-control" }}
+                <div class="form-text">Máximo {{ event.max_tickets_per_booking }} personas</div>
+              </div>
+              {% endif %}
+
+              <div class="col-12">
+                <button class="btn btn-primary w-100" type="submit">
+                  <i class="bi bi-check-circle"></i> Confirmar reserva
+                </button>
+              </div>
+            </form>
+          {% else %}
+            <div class="alert alert-warning mt-4">
+              <i class="bi bi-exclamation-triangle"></i> Este evento está lleno.
+            </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
   </div>
 </body>
 </html>
