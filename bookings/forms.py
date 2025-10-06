@@ -2,37 +2,58 @@ from django import forms
 from django.utils.timezone import localtime
 from .models import Booking, Appointment
  
+from django.core.validators import RegexValidator, EmailValidator
+import uuid
+
 class BookingForm(forms.ModelForm):
     quantity = forms.IntegerField(
-        label="Cantidad de lugares",
+        label="Cantidad",
         min_value=1,
         initial=1,
-        required=True,
-        widget=forms.NumberInput(attrs={"class": "form-control", "style": "max-width:120px"})
+        required=False,
+    )
+
+    phone = forms.CharField(
+        label="Teléfono",
+        validators=[
+            RegexValidator(
+                regex=r'^\+?(\d[\d\s-]{7,15})$',
+                message="Ingrese un número de teléfono válido (7-15 dígitos)."
+            )
+        ],
+        widget=forms.TextInput(attrs={
+            "class": "form-control",
+            "placeholder": "+52 55 1234 5678",
+            "inputmode": "tel",
+            "pattern": r"^\+?(\d[\d\s-]{7,15})$"
+        })
+    )
+
+    email = forms.EmailField(
+        label="Correo electrónico",
+        validators=[EmailValidator(message="Ingrese un correo válido (ej. usuario@gmail.com).")],
+        widget=forms.EmailInput(attrs={
+            "class": "form-control",
+            "placeholder": "ejemplo@correo.com",
+            "autocomplete": "email",
+        })
     )
 
     class Meta:
         model = Booking
-        fields = ['name', 'email', 'phone', 'quantity']
-        
-    def __init__(self, *args, event=None, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.event = event
+        fields = ["name", "email", "phone", "quantity"]
 
-        # si el evento no permite reservas múltiples, se oculta el campo
-        if not event or not event.allow_group_booking:
-            self.fields.pop("quantity", None)
+    def clean_email(self):
+        email = self.cleaned_data.get("email")
+        dominios_validos = [
+            "gmail.com", "hotmail.com", "outlook.com", "yahoo.com", "icloud.com",
+            "live.com", "msn.com"
+        ]
+        dominio = email.split("@")[-1].lower()
+        if dominio not in dominios_validos:
+            raise forms.ValidationError(f"El dominio '{dominio}' no es común. Verifique su correo.")
+        return email
 
-    def clean_quantity(self):
-        qty = self.cleaned_data.get("quantity", 1)
-        if self.event:
-            if qty > self.event.seats_available:
-                raise forms.ValidationError("No hay suficientes lugares disponibles.")
-            if self.event.allow_group_booking and qty > self.event.max_tickets_per_booking:
-                raise forms.ValidationError(
-                    f"Solo puede reservar hasta {self.event.max_tickets_per_booking} lugares."
-                )
-        return qty
 
 
 class AppointmentForm(forms.ModelForm):

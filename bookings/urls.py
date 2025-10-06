@@ -8,7 +8,7 @@ urlpatterns = [
     # Eventos públicos
     path("eventos/", views.EventListView.as_view(), name="event_list"),
     path("event/<int:pk>/", views.event_detail, name="event_detail"),
-    path("booking/success/<int:pk>/", views.booking_success, name="booking_success"),
+    path("booking/success/<uuid:code>/", views.booking_success, name="booking_success"),
     # Agenda interna
     path("agenda/", views_appointments.agenda, name="agenda"),
     path("appointment/new/", views_appointments.create_appointment, name="create_appointment"),

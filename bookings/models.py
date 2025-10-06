@@ -43,14 +43,17 @@ class Event(models.Model):
         return max(0, self.capacity - self.seats_taken)
 
 
+import uuid
+
 class Booking(models.Model):
     event = models.ForeignKey("Event", on_delete=models.CASCADE, related_name="bookings")
     name = models.CharField(max_length=150)
     email = models.EmailField()
     phone = models.CharField(max_length=50)
-    quantity = models.PositiveIntegerField(default=1)  # 👈 nuevo campo
+    quantity = models.PositiveIntegerField(default=1)
     cancelled = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
+    confirmation_code = models.UUIDField(default=uuid.uuid4, editable=False, null=True, blank=True)
 
     def __str__(self):
         return f"{self.name} ({self.event.title})"

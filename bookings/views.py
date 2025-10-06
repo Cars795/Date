@@ -4,6 +4,8 @@ from django.urls import reverse
 from django.contrib import messages
 from .models import Event
 from .forms import BookingForm
+from .models import Booking
+
 
 class EventListView(ListView):
     model = Event
@@ -11,30 +13,35 @@ class EventListView(ListView):
     context_object_name = 'events'
     queryset = Event.objects.order_by('start').all()
 
+# bookings/views.py
+from django.shortcuts import render, get_object_or_404, redirect
+from django.contrib import messages
+from .models import Event
+from .forms import BookingForm
+
 def event_detail(request, pk):
     event = get_object_or_404(Event, pk=pk)
+    form = BookingForm(request.POST or None)
 
-    if request.method == "POST":
-        form = BookingForm(request.POST, event=event)
-        if form.is_valid():
-            booking = form.save(commit=False)
-            booking.event = event
+    if request.method == "POST" and form.is_valid():
+        booking = form.save(commit=False)
+        booking.event = event
+        if booking.quantity > event.seats_available:
+            form.add_error("quantity", "No hay suficientes lugares disponibles.")
+        else:
             booking.save()
-            messages.success(request, "Reserva realizada con éxito.")
-            return redirect("bookings:event_list")
-    else:
-        form = BookingForm(event=event)
+            messages.success(
+                request,
+                f"Reserva confirmada. Tu número de confirmación es: {booking.confirmation_code}"
+            )
+            return redirect("bookings:booking_success", code=booking.confirmation_code)
 
-    return render(request, "bookings/event_detail.html", {
-        "event": event,
-        "form": form,
-    })
+    return render(request, "bookings/event_detail.html", {"event": event, "form": form})
 
 
-def booking_success(request, pk):
-    from .models import Booking
-    booking = get_object_or_404(Booking, pk=pk)
-    return render(request, 'bookings/booking_success.html', {'booking': booking})
+def booking_success(request, code):
+    booking = get_object_or_404(Booking, confirmation_code=code)
+    return render(request, "bookings/booking_success.html", {"booking": booking})
 
 def home(request):
     return render(request, "bookings/home.html")
