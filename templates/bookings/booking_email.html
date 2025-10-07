@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <title>Confirmación de Reserva</title>
+  <style>
+    body {
+      font-family: "Segoe UI", Arial, sans-serif;
+      background-color: #f5f6f7;
+      color: #2e4052;
+      margin: 0;
+      padding: 0;
+    }
+    .container {
+      background: #ffffff;
+      max-width: 600px;
+      margin: 30px auto;
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    }
+    .header {
+      background-color: #005098;
+      color: #fff;
+      text-align: center;
+      padding: 20px;
+    }
+    .header h1 {
+      margin: 0;
+      font-size: 1.6rem;
+    }
+    .content {
+      padding: 20px;
+    }
+    .content h2 {
+      color: #2e4052;
+      font-size: 1.3rem;
+    }
+    .content p {
+      margin: 8px 0;
+      line-height: 1.5;
+    }
+    .info-box {
+      background-color: #e5f1fb;
+      border-left: 4px solid #005098;
+      padding: 10px 15px;
+      margin: 15px 0;
+      border-radius: 6px;
+    }
+    .btn {
+      display: inline-block;
+      background-color: #005098;
+      color: #fff !important;
+      padding: 12px 24px;
+      border-radius: 6px;
+      text-decoration: none;
+      font-weight: 600;
+      margin-top: 15px;
+    }
+    .footer {
+      background: #f0f0f0;
+      color: #889db8;
+      font-size: 0.8rem;
+      text-align: center;
+      padding: 15px;
+    }
+    @media (max-width: 600px) {
+      .content, .header, .footer { padding: 15px; }
+      .btn { display: block; width: 100%; text-align: center; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>🎟️ Confirmación de tu reserva</h1>
+    </div>
+    <div class="content">
+      <h2>Hola {{ booking.name }},</h2>
+      <p>Gracias por reservar tu lugar en <strong>{{ booking.event.title }}</strong>.</p>
+
+      <div class="info-box">
+        <p><strong>📅 Fecha:</strong> {{ booking.event.start|date:"l d M Y, H:i" }}</p>
+        <p><strong>🏛️ Lugar:</strong> {{ booking.event.type.name }}</p>
+        <p><strong>🎫 Cantidad:</strong> {{ booking.quantity }}</p>
+        <p><strong>🔖 Código de confirmación:</strong> {{ booking.confirmation_code }}</p>
+      </div>
+
+      <p>Adjuntamos tu boleto en formato PDF. También puedes descargarlo con el siguiente botón:</p>
+
+      <a href="{{ request.scheme }}://{{ request.get_host }}/booking/pdf/{{ booking.confirmation_code }}/"
+         class="btn">Descargar boleto PDF</a>
+
+      <p style="margin-top:20px;">Si tienes dudas o deseas cancelar tu reserva, contáctanos respondiendo este correo.</p>
+    </div>
+    <div class="footer">
+      <p>© {{ booking.event.start|date:"Y" }} Agenda Eventos — Sistema de Reservas</p>
+    </div>
+  </div>
+</body>
+</html>

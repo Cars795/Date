@@ -22,5 +22,6 @@ urlpatterns = [
     path("appointment/<int:pk>/delete/", views_appointments.delete_appointment, name="delete_appointment"),  # opcional
     path("appointment/<int:pk>/status/<str:status>/", views_appointments.change_appointment_status, name="change_appointment_status"),
 
-
+    # 👉 agrega esta línea para el PDF:
+    path("booking/pdf/<uuid:code>/", views.booking_ticket_pdf, name="booking_ticket_pdf"),
 ]
