@@ -43,8 +43,17 @@ def _resolve_next(request, fallback_name="bookings:agenda_semanal"):
 # =======================
 # VISTA SIMPLE: AGENDA
 # =======================
+from datetime import date
+from django.utils.timezone import now
+from django.db.models import Prefetch
+from django.shortcuts import render
+from .models import Appointment, Staff  # Ajusta los imports a tus modelos reales
+
+
 def agenda(request):
-    # día seleccionado: ?date=YYYY-MM-DD o hoy
+    """Tablero diario de citas — versión optimizada e interiorista digital."""
+
+    # --- Día seleccionado: ?date=YYYY-MM-DD o hoy ---
     today = now().date()
     day_str = request.GET.get("date")
     try:
@@ -52,28 +61,40 @@ def agenda(request):
     except ValueError:
         selected_day = today
 
-    # Prefetch solo citas del día
+    # --- Solo citas del día seleccionado ---
     todays_appointments = Appointment.objects.filter(
         start__date=selected_day
     ).select_related("client", "staff").order_by("start")
 
+    # --- Staff + Prefetch de citas del día ---
     staff_list = Staff.objects.prefetch_related(
         Prefetch("appointment_set", queryset=todays_appointments)
     )
 
-    # contadores atendidas/total por staff
+    # --- Contadores por staff ---
     staff_counters = {}
     for s in staff_list:
         total = s.appointment_set.all().count()
         done = sum(1 for a in s.appointment_set.all() if a.status == "done")
         staff_counters[s.id] = {"done": done, "total": total}
 
+    # --- 📊 Estadísticas globales del día (para el panel lateral) ---
+    stats = {
+        "pending": todays_appointments.filter(status="pending").count(),
+        "confirmed": todays_appointments.filter(status="confirmed").count(),
+        "cancelled": todays_appointments.filter(status="cancelled").count(),
+        "done": todays_appointments.filter(status="done").count(),
+    }
+
+    # --- Render final ---
     return render(request, "bookings/agenda.html", {
         "today": today,
-        "day": selected_day,          # 👈 ahora SIEMPRE existe en template
+        "day": selected_day,
         "staff_list": staff_list,
         "staff_counters": staff_counters,
+        "stats": stats,  # 👈 ahora alimenta el panel lateral
     })
+
 
 # ====================================
 # VISTA UNIFICADA: AÑO / MES / SEMANA / DÍA

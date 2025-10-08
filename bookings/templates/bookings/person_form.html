@@ -1,0 +1,285 @@
+{% load static %}
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <title>{% if is_edit %}Editar {{ type_label }}{% else %}Nuevo {{ type_label }}{% endif %}</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+  <style>
+    body { background-color: #f6f7f9; }
+    .container { max-width: 820px; }
+    .card { border-radius: 12px; box-shadow: 0 2px 6px rgba(0,0,0,.06); background: #fff; padding: 2rem; }
+
+    /* Wizard */
+    .wizard-nav { display: flex; justify-content: space-between; margin-bottom: 2rem; }
+    .wizard-step { flex: 1; text-align: center; position: relative; color: #a0a5ab; font-size: .9rem; }
+    .wizard-step.active { color: #005098; font-weight: 600; }
+    .wizard-step i { font-size: 1.4rem; display: block; margin-bottom: .25rem; }
+    .wizard-step::after {
+      content: ''; position: absolute; top: 50%; right: -50%; width: 100%; height: 2px;
+      background: #dce1e7; transform: translateY(-50%); z-index: -1;
+    }
+    .wizard-step:last-child::after { display: none; }
+    @media (max-width: 576px) { .wizard-step span { display: none; } }
+
+    /* Inputs */
+    .day-chip { display: flex; align-items: center; gap: .3rem; background: #eef2f6;
+                border-radius: 6px; padding: .3rem .6rem; cursor: pointer; }
+    .day-chip input { accent-color: #005098; }
+
+    .btn-cancel { border-color: #ccc; background: #fff; }
+    .btn-cancel:hover { background: #f8f9fa; }
+
+    /* Summary */
+    .summary-card { border: 1px solid #eee; border-radius: 10px; background: #fff; }
+    .summary-card i { font-size: 2rem; }
+    .summary-details p { margin-bottom: .4rem; }
+
+    /* Email suggestions */
+    .suggestions {
+      position: absolute; background: #fff; border: 1px solid #ccc; border-radius: 6px;
+      box-shadow: 0 2px 8px rgba(0,0,0,.1); z-index: 10; width: 100%; display: none;
+    }
+    .suggestion { padding: .5rem .75rem; cursor: pointer; }
+    .suggestion.active, .suggestion:hover { background: #e9f0fb; }
+  </style>
+</head>
+
+<body class="py-4">
+<div class="container">
+  <div class="card">
+    <!-- Wizard -->
+    <div class="wizard-nav mb-4">
+      <div class="wizard-step active"><i class="bi bi-person"></i> <span>Básico</span></div>
+      <div class="wizard-step"><i class="bi bi-envelope"></i> <span>Contacto</span></div>
+      <div class="wizard-step"><i class="bi bi-briefcase"></i> <span>{% if type == 'client' %}Empresa{% else %}Rol{% endif %}</span></div>
+      {% if type == 'staff' %}
+      <div class="wizard-step"><i class="bi bi-clock"></i> <span>Disponibilidad</span></div>
+      {% endif %}
+      <div class="wizard-step"><i class="bi bi-check-circle"></i> <span>Resumen</span></div>
+    </div>
+
+    <form method="post" id="personForm" novalidate>
+      {% csrf_token %}
+
+      <!-- Paso 1 -->
+      <div class="step" data-step="1">
+        <div class="row g-3">
+          <div class="col-md-4">
+            <label class="form-label">Título</label>
+            <select name="title" class="form-select">
+              <option value="">—</option>
+              <option>Sr.</option><option>Sra.</option><option>Ing.</option><option>Lic.</option>
+              <option>Dr.</option><option>Dra.</option><option>Mtro.</option><option>Arq.</option>
+            </select>
+          </div>
+          <div class="col-md-8">
+            <label class="form-label">Nombre completo</label>
+            <input type="text" name="name" class="form-control" required>
+          </div>
+        </div>
+      </div>
+
+      <!-- Paso 2 -->
+      <div class="step d-none" data-step="2">
+        <div class="row g-3 position-relative">
+          <div class="col-md-6">
+            <label class="form-label">Teléfono</label>
+            <input type="tel" id="phoneInput" name="phone" class="form-control" placeholder="+52 55-1234-5678">
+            <div class="form-check mt-1">
+              <input class="form-check-input" type="checkbox" name="is_whatsapp" id="is_whatsapp">
+              <label class="form-check-label" for="is_whatsapp">
+                <i class="bi bi-whatsapp text-success"></i> Es número de WhatsApp
+              </label>
+            </div>
+          </div>
+          <div class="col-md-6 position-relative">
+            <label class="form-label">Correo electrónico</label>
+            <input type="email" id="emailInput" name="email" class="form-control" placeholder="nombre@correo.com">
+            <div class="suggestions" id="emailSuggestions"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Paso 3 -->
+      <div class="step d-none" data-step="3">
+        {% if type == "client" %}
+        <label class="form-label">Empresa / procedencia</label>
+        <input type="text" name="company" class="form-control">
+        {% else %}
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label">Rol / puesto</label>
+            <input type="text" name="role" class="form-control">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Especialidad</label>
+            <input type="text" name="specialty" class="form-control">
+          </div>
+        </div>
+        {% endif %}
+      </div>
+
+      <!-- Paso 4 (solo staff) -->
+      {% if type == "staff" %}
+      <div class="step d-none" data-step="4">
+        <h6 class="mb-3 text-primary">Disponibilidad por día</h6>
+        <div id="availability">
+          {% for day in week_days %}
+          <div class="day-block mb-2 p-2 border rounded">
+            <div class="form-check">
+              <input type="checkbox" class="form-check-input toggle-day" id="day_{{ forloop.counter }}" value="{{ day }}">
+              <label class="form-check-label" for="day_{{ forloop.counter }}">{{ day }}</label>
+            </div>
+            <div class="ranges ms-3 mt-2 d-none">
+              <div class="range d-flex gap-2 mb-1">
+                <input type="time" class="form-control" name="from_{{ day }}[]">
+                <input type="time" class="form-control" name="to_{{ day }}[]">
+                <button type="button" class="btn btn-sm btn-outline-secondary add-range">+</button>
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- Paso 5 -->
+      <div class="step d-none" data-step="5">
+        <div class="summary-card text-center p-4 mb-3">
+          <i class="bi bi-person-circle text-primary mb-2"></i>
+          <h5 class="fw-semibold" id="summaryName"></h5>
+          <p class="text-muted mb-1" id="summaryRole"></p>
+          <p><i class="bi bi-telephone text-success"></i> <span id="summaryPhone"></span>
+             <i id="summaryWhatsapp" class="bi bi-whatsapp text-success d-none"></i></p>
+          <p><i class="bi bi-envelope"></i> <span id="summaryEmail"></span></p>
+        </div>
+        <div class="summary-details">
+          <p><strong>Preferencias:</strong> <span id="summaryPrefs">—</span></p>
+          <p><strong>Notas:</strong> <span id="summaryNotes">—</span></p>
+          {% if type == "staff" %}
+          <h6 class="mt-4 text-primary fw-semibold">Disponibilidad</h6>
+          <ul id="summaryAvailability"></ul>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Navegación -->
+      <div class="d-flex justify-content-between mt-4">
+        <button type="button" class="btn btn-outline-secondary" id="prevStep" disabled><i class="bi bi-arrow-left"></i> Anterior</button>
+        <div class="d-flex gap-2">
+          <button type="button" class="btn btn-outline-secondary btn-cancel"><i class="bi bi-x-circle"></i> Cancelar</button>
+          <button type="button" class="btn btn-primary" id="nextStep">Siguiente <i class="bi bi-arrow-right"></i></button>
+          <button type="submit" class="btn btn-primary d-none" id="saveBtn"><i class="bi bi-check-circle"></i> Guardar</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const steps = document.querySelectorAll(".step");
+  const wizard = document.querySelectorAll(".wizard-step");
+  let current = 0;
+
+  const next = document.getElementById("nextStep");
+  const prev = document.getElementById("prevStep");
+  const save = document.getElementById("saveBtn");
+  const form = document.getElementById("personForm");
+
+  function showStep(i) {
+    steps.forEach((s, idx) => s.classList.toggle("d-none", idx !== i));
+    wizard.forEach((w, idx) => w.classList.toggle("active", idx === i));
+    prev.disabled = i === 0;
+    next.classList.toggle("d-none", i === steps.length - 1);
+    save.classList.toggle("d-none", i !== steps.length - 1);
+  }
+
+  next.onclick = () => {
+    if (current < steps.length - 1) current++;
+    if (current === steps.length - 1) fillSummary();
+    showStep(current);
+  };
+  prev.onclick = () => { if (current > 0) current--; showStep(current); };
+  showStep(current);
+
+  // Cancelar con confirmación estilo eventos
+  document.querySelector(".btn-cancel").addEventListener("click", (e) => {
+    if (form.querySelectorAll("input, textarea").some(i => i.value.trim())) {
+      if (!confirm("Tiene datos sin guardar. ¿Desea cancelar el registro?")) e.preventDefault();
+    }
+  });
+
+  // Email suggestions
+  const domains = ["gmail.com","outlook.com","hotmail.com","yahoo.com","icloud.com"];
+  const emailInput = document.getElementById("emailInput");
+  const suggestionsBox = document.getElementById("emailSuggestions");
+
+  emailInput.addEventListener("input", (e) => {
+    const val = e.target.value;
+    const at = val.indexOf("@");
+    if (at > -1) {
+      const prefix = val.slice(0, at);
+      const query = val.slice(at + 1).toLowerCase();
+      const matches = domains.filter(d => d.startsWith(query));
+      suggestionsBox.innerHTML = matches.map(d => `<div class="suggestion">${prefix}@${d}</div>`).join("");
+      suggestionsBox.style.display = matches.length ? "block" : "none";
+    } else suggestionsBox.style.display = "none";
+  });
+  suggestionsBox.addEventListener("click", e => {
+    if (e.target.classList.contains("suggestion")) {
+      emailInput.value = e.target.textContent;
+      suggestionsBox.style.display = "none";
+    }
+  });
+
+  // Teléfono máscara
+  const phone = document.getElementById("phoneInput");
+  phone.addEventListener("input", (e) => {
+    let v = e.target.value.replace(/\D/g, "");
+    if (!v.startsWith("52")) v = "52" + v;
+    e.target.value = "+ " + v.replace(/^(\d{2})(\d{2})(\d{4})(\d{0,4}).*/, "+$1 $2-$3$4");
+  });
+
+  // Disponibilidad dinámica
+  document.querySelectorAll(".toggle-day").forEach(chk => {
+    chk.addEventListener("change", (e) => {
+      const block = e.target.closest(".day-block").querySelector(".ranges");
+      block.classList.toggle("d-none", !e.target.checked);
+    });
+  });
+  document.addEventListener("click", (e) => {
+    if (e.target.classList.contains("add-range")) {
+      const range = e.target.closest(".range").cloneNode(true);
+      range.querySelectorAll("input").forEach(i => i.value = "");
+      e.target.closest(".ranges").appendChild(range);
+    }
+  });
+
+  // Resumen
+  function fillSummary() {
+    document.getElementById("summaryName").textContent = form.name.value || "—";
+    document.getElementById("summaryPhone").textContent = form.phone.value || "—";
+    document.getElementById("summaryEmail").textContent = form.email.value || "—";
+    document.getElementById("summaryWhatsapp").classList.toggle("d-none", !form.is_whatsapp.checked);
+    if (form.role) document.getElementById("summaryRole").textContent = form.role.value || form.company.value || "—";
+
+    {% if type == "staff" %}
+    const ul = document.getElementById("summaryAvailability");
+    ul.innerHTML = "";
+    document.querySelectorAll(".day-block").forEach(d => {
+      const day = d.querySelector("label").textContent;
+      if (d.querySelector(".toggle-day").checked) {
+        const slots = Array.from(d.querySelectorAll(".range")).map(r => `${r.querySelectorAll("input")[0].value}–${r.querySelectorAll("input")[1].value}`).join(", ");
+        const li = document.createElement("li"); li.textContent = `${day}: ${slots}`;
+        ul.appendChild(li);
+      }
+    });
+    {% endif %}
+  }
+});
+</script>
+</body>
+</html>

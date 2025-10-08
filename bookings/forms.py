@@ -81,3 +81,44 @@ class AppointmentForm(forms.ModelForm):
         # Si es edición, precarga el valor en formato datetime-local (zona local)
         if self.instance and self.instance.pk and self.instance.start:
             self.fields['start'].initial = localtime(self.instance.start).strftime('%Y-%m-%dT%H:%M')
+
+
+
+from django import forms
+from .models import Client, Staff
+
+class PersonBaseForm(forms.ModelForm):
+    """Campos comunes entre Cliente y Staff."""
+    class Meta:
+        fields = ["name", "phone", "email", "preferences", "services", "notes", "active"]
+        widgets = {
+            "name": forms.TextInput(attrs={"class": "form-control"}),
+            "phone": forms.TextInput(attrs={"class": "form-control"}),
+            "email": forms.EmailInput(attrs={"class": "form-control"}),
+            "preferences": forms.Textarea(attrs={"class": "form-control", "rows": 2}),
+            "services": forms.Textarea(attrs={"class": "form-control", "rows": 2}),
+            "notes": forms.Textarea(attrs={"class": "form-control", "rows": 3}),
+            "active": forms.CheckboxInput(attrs={"class": "form-check-input"}),
+        }
+
+
+class ClientForm(PersonBaseForm):
+    class Meta(PersonBaseForm.Meta):
+        model = Client
+        fields = PersonBaseForm.Meta.fields + ["company"]
+        widgets = {
+            **PersonBaseForm.Meta.widgets,
+            "company": forms.TextInput(attrs={"class": "form-control"}),
+        }
+
+
+class StaffForm(PersonBaseForm):
+    class Meta(PersonBaseForm.Meta):
+        model = Staff
+        fields = PersonBaseForm.Meta.fields + ["role", "specialty", "allow_multiple"]
+        widgets = {
+            **PersonBaseForm.Meta.widgets,
+            "role": forms.TextInput(attrs={"class": "form-control"}),
+            "specialty": forms.TextInput(attrs={"class": "form-control"}),
+            "allow_multiple": forms.CheckboxInput(attrs={"class": "form-check-input"}),
+        }

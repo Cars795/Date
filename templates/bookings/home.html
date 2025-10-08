@@ -1,53 +1,208 @@
-<!doctype html>
-<html>
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
 <head>
-  <meta charset="utf-8">
+  <meta charset="UTF-8">
   <title>Sistema de Reservas</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+
   <style>
-    body { background: #F5F6F7; }
+    :root {
+      --main-color: #005098;
+      --accent-color: #0d6efd;
+      --soft-bg: #f5f6f7;
+    }
+
+    body {
+      background: var(--soft-bg);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+    }
+
+    header {
+      text-align: center;
+      padding: 3rem 1rem 1rem;
+      animation: fadeIn 0.8s ease forwards;
+    }
+
+    header h1 {
+      font-weight: 700;
+      color: var(--main-color);
+      margin-bottom: 0.5rem;
+    }
+
+    header p {
+      color: #6c757d;
+      font-size: 1.05rem;
+    }
+
+    .menu-container {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem 0;
+    }
+
+    .menu-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 2rem;
+      width: 100%;
+      max-width: 900px;
+    }
+
     .menu-card {
-      border-radius: 12px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-      transition: transform .2s;
+      background: #fff;
+      border-radius: 1rem;
+      padding: 2rem 1.5rem;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+      text-align: center;
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+      cursor: pointer;
+      opacity: 0;
+      transform: translateY(30px);
+      animation: slideUp 0.8s ease forwards;
     }
+
+    /* Animación escalonada */
+    .menu-card:nth-child(1) { animation-delay: 0.1s; }
+    .menu-card:nth-child(2) { animation-delay: 0.25s; }
+    .menu-card:nth-child(3) { animation-delay: 0.4s; }
+
+    .menu-card::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, var(--main-color), var(--accent-color));
+      opacity: 0;
+      pointer-events: none; /* ✅ ya no bloquea clics */
+      transition: opacity 0.25s ease;
+      z-index: 0;
+    }
+
+    .menu-card:hover::before { opacity: 0.06; }
     .menu-card:hover {
-      transform: scale(1.02);
+      transform: translateY(-6px);
+      box-shadow: 0 6px 16px rgba(0,0,0,0.12);
     }
+
     .menu-icon {
       font-size: 3rem;
-      color: #005098;
+      color: var(--main-color);
+      margin-bottom: 1rem;
+      transition: transform 0.3s ease;
+      z-index: 1;
+      position: relative;
+    }
+
+    .menu-card:hover .menu-icon { transform: scale(1.1); }
+
+    .menu-card h3 {
+      font-weight: 600;
+      margin-bottom: 0.75rem;
+      color: #212529;
+      z-index: 1;
+      position: relative;
+    }
+
+    .menu-card p {
+      color: #6c757d;
+      font-size: 0.95rem;
+      margin-bottom: 1.5rem;
+      z-index: 1;
+      position: relative;
+    }
+
+    .btn {
+      border-radius: 8px;
+      font-weight: 500;
+      z-index: 1;
+      position: relative;
+    }
+
+    footer {
+      text-align: center;
+      padding: 1.5rem 0;
+      color: #6c757d;
+      font-size: 0.9rem;
+      animation: fadeIn 1s ease 0.5s forwards;
+    }
+
+    /* Animaciones */
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(30px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @media (max-width: 768px) {
+      header { padding: 2rem 1rem 0.5rem; }
+      .menu-card { padding: 1.75rem 1.25rem; }
+      .menu-icon { font-size: 2.5rem; }
     }
   </style>
 </head>
-<body class="p-5">
-  <div class="container">
-    <h1 class="mb-4 text-center">Sistema de Reservas</h1>
 
-    <div class="row justify-content-center">
-      <!-- Eventos públicos -->
-      <div class="col-md-4">
-        <div class="card menu-card text-center p-4">
-          <div class="menu-icon">📢</div>
+<body>
+  <header>
+    <h1><i class="bi bi-calendar-week"></i> Sistema de Reservas</h1>
+    <p>Organiza eventos, gestiona citas y mantén todo bajo control.</p>
+  </header>
+
+  <section class="menu-container">
+    <div class="container">
+      <div class="menu-grid">
+
+        <!-- Eventos públicos -->
+        <div class="menu-card" onclick="window.location='{% url 'bookings:event_list' %}'">
+          <div class="menu-icon"><i class="bi bi-megaphone"></i></div>
           <h3>Eventos Públicos</h3>
-          <p>Consulta y regístrate en eventos abiertos.</p>
-          <a href="{% url 'bookings:event_list' %}" class="btn btn-primary">Ver eventos</a>
+          <p>Consulta y regístrate en eventos abiertos al público.</p>
+          <a href="{% url 'bookings:event_list' %}" class="btn btn-primary w-100">
+            <i class="bi bi-list-ul"></i> Ver eventos
+          </a>
         </div>
-      </div>
 
-      <!-- Agenda interna -->
-      <div class="col-md-4">
-        <div class="card menu-card text-center p-4">
-          <div class="menu-icon">📅</div>
+        <!-- Agenda interna -->
+        <div class="menu-card" onclick="window.location='{% url 'bookings:agenda' %}'">
+          <div class="menu-icon"><i class="bi bi-calendar-check"></i></div>
           <h3>Agenda Interna</h3>
-          <p>Control de citas de staff y clientes internos.</p>
-          <a href="{% url 'bookings:agenda' %}" class="btn btn-success">Ir a la agenda</a>
-
-          <a href="{% url 'bookings:agenda_semanal' %}" class="btn btn-outline-primary mt-2">Vista semanal</a>
-
+          <p>Administra citas internas y revisa tu calendario semanal.</p>
+          <a href="{% url 'bookings:agenda' %}" class="btn btn-success w-100 mb-2">
+            <i class="bi bi-person-video3"></i> Ir a la agenda
+          </a>
+          <a href="{% url 'bookings:agenda_semanal' %}" class="btn btn-outline-primary w-100">
+            <i class="bi bi-calendar-week"></i> Vista semanal
+          </a>
         </div>
+
+        <!-- Panel administrativo -->
+        {% if user.is_authenticated and user.is_staff %}
+        <div class="menu-card" onclick="window.location='{% url 'admin_panel:dashboard' %}'">
+          <div class="menu-icon"><i class="bi bi-speedometer2"></i></div>
+          <h3>Panel Administrativo</h3>
+          <p>Gestiona eventos, reservas y métricas del sistema.</p>
+          <a href="{% url 'admin_panel:dashboard' %}" class="btn btn-outline-dark w-100">
+            <i class="bi bi-gear"></i> Ir al panel
+          </a>
+        </div>
+        {% endif %}
       </div>
     </div>
-  </div>
+  </section>
+
+  <footer>
+    <small>© {{ year|default:2025 }} Sistema de Reservas — desarrollado con propósito y diseño interiorista digital 💡</small>
+  </footer>
 </body>
 </html>

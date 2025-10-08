@@ -1,0 +1,245 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Panel de administración</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+  <style>
+    body {
+      background-color: #f8f9fa;
+      font-size: 0.95rem;
+    }
+
+    .page-container {
+      max-width: 1250px;
+      margin: 0 auto;
+      padding: 2rem 2.5rem 3rem;
+    }
+
+    /* Línea 1: Botón de navegación */
+    .top-bar {
+      position: sticky;
+      top: 0;
+      background: #f8f9fa;
+      z-index: 1020;
+      border-bottom: 1px solid #dee2e6;
+      padding: 1rem 0 0.75rem;
+    }
+
+    /* Línea 2: Título */
+    .page-title {
+      text-align: center;
+      color: #0d6efd;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      margin: 1rem 0 2rem;
+    }
+
+    /* Línea 3: KPI cards */
+    .kpi-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      justify-content: center;
+      margin-bottom: 2.5rem;
+    }
+
+    .kpi-card {
+      flex: 1;
+      min-width: 220px;
+      text-align: center;
+      background: #fff;
+      border-radius: 0.75rem;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+      transition: transform 0.2s ease;
+    }
+
+    .kpi-card:hover {
+      transform: translateY(-3px);
+    }
+
+    .kpi-card h4 {
+      margin: 0;
+      font-weight: 600;
+    }
+
+    .kpi-card small {
+      color: #6c757d;
+    }
+
+    /* Línea 4: barra de herramientas */
+    .toolbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #f1f3f5;
+      border-radius: 6px;
+      padding: 0.75rem 1rem;
+      margin-bottom: 1rem;
+      border: 1px solid #e0e0e0;
+    }
+
+    /* Línea 5: Tabla */
+    table.table {
+      background: #fff;
+      border-radius: 0.5rem;
+      overflow: hidden;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+    }
+
+    thead.table-primary th {
+      background-color: #e7f1ff !important;
+      color: #0d6efd;
+      font-weight: 600;
+      border-bottom: 2px solid #cfe2ff;
+    }
+
+    .table-hover tbody tr:hover {
+      background-color: #f6faff;
+    }
+
+    /* Línea 6: Botones de acción */
+    .btn-group .btn {
+      font-size: 0.85rem;
+      padding: 0.35rem 0.6rem;
+    }
+
+    /* Estilo de botones secundarios */
+    .btn-outline-warning:hover {
+      color: #fff;
+      background-color: #ffc107;
+      border-color: #ffc107;
+    }
+
+    .btn-outline-danger:hover {
+      color: #fff;
+      background-color: #dc3545;
+      border-color: #dc3545;
+    }
+
+    /* Espaciado lateral adicional */
+    @media (max-width: 992px) {
+      .page-container {
+        padding: 1.5rem 1rem;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="page-container">
+
+    <!-- Línea 1: Botón superior -->
+    <div class="top-bar mb-3">
+      <a href="{% url 'bookings:event_list' %}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-left"></i> Volver a eventos
+      </a>
+    </div>
+
+    <!-- Línea 2: Título -->
+    <h1 class="page-title">Panel de administración</h1>
+
+    <!-- Línea 3: KPI cards -->
+    <div class="kpi-row">
+      <div class="kpi-card border-primary">
+        <div class="card-body py-3">
+          <h4 class="text-primary">{{ total_events }}</h4>
+          <small>Eventos creados</small>
+        </div>
+      </div>
+
+      <div class="kpi-card border-success">
+        <div class="card-body py-3">
+          <h4 class="text-success">{{ total_bookings }}</h4>
+          <small>Reservas totales</small>
+          <div class="mt-2">
+            <a href="{% url 'admin_panel:booking_list' %}" class="btn btn-outline-primary btn-sm">
+              <i class="bi bi-list-ul"></i> Ver reservas
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <div class="kpi-card border-secondary bg-light">
+        <div class="card-body py-3">
+          <h4 class="text-muted"><i class="bi bi-bar-chart"></i></h4>
+          <small>Disponible para futura métrica</small>
+        </div>
+      </div>
+    </div>
+
+    <!-- Línea 4: Toolbar -->
+    <div class="toolbar">
+      <h4 class="mb-0"><i class="bi bi-calendar-event"></i> Eventos activos</h4>
+      <a href="{% url 'admin_panel:event_create' %}" class="btn btn-success">
+        <i class="bi bi-plus-lg"></i> Nuevo evento
+      </a>
+    </div>
+
+
+    
+
+    <!-- Línea 5: Tabla -->
+    <div class="table-responsive">
+      <table class="table table-striped table-hover align-middle mb-0">
+        <thead class="table-primary text-center">
+          <tr>
+            <th>Título</th>
+            <th>Fecha</th>
+            <th>Capacidad</th>
+            <th>Disponibles</th>
+            <th>Reservas</th>
+            <th class="text-center">Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for e in events %}
+          <tr>
+            <td><strong>{{ e.title }}</strong></td>
+            <td class="text-center">{{ e.start|date:"d/m/Y H:i" }}</td>
+            <td class="text-center">{{ e.capacity }}</td>
+            <td class="text-center">{{ e.seats_available }}</td>
+            <td class="text-center">{{ e.bookings.count }}</td>
+            <td class="text-center">
+              <div class="btn-group">
+                <a href="{% url 'admin_panel:event_edit' e.pk %}" class="btn btn-sm btn-outline-primary" title="Editar">
+                  <i class="bi bi-pencil"></i>
+                </a>
+                <button type="button" class="btn btn-sm btn-outline-warning" title="Reprogramar">
+                  <i class="bi bi-arrow-repeat"></i>
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-danger" title="Cancelar evento">
+                  <i class="bi bi-x-circle"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="6" class="text-center text-muted py-4">
+              <i class="bi bi-inbox display-6 d-block mb-2"></i>
+              No hay eventos registrados.
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    
+    <div class="col-md-4">
+      <div class="card menu-card text-center p-4">
+        <div class="menu-icon">👥</div>
+        <h3>Gestión de Personas</h3>
+        <p>Administra clientes y staff para tus citas.</p>
+        <a href="{% url 'bookings:person_list' %}?type=clients" class="btn btn-primary">Ver personas</a>
+      </div>
+    </div>
+
+  </div>
+
+  
+</body>
+</html>

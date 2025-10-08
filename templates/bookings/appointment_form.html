@@ -3,25 +3,168 @@
 <head>
   <meta charset="utf-8">
   <title>{% if is_edit %}Editar cita{% else %}Nueva cita{% endif %}</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+  <style>
+    body {
+      background: #f8f9fa;
+    }
+
+    .container {
+      max-width: 720px;
+    }
+
+    h1 {
+      color: #005098;
+      font-weight: 600;
+    }
+
+    .form-card {
+      background: #fff;
+      border-radius: 12px;
+      padding: 2rem;
+      box-shadow: 0 3px 10px rgba(0,0,0,0.08);
+      transition: all 0.2s ease-in-out;
+    }
+
+    .form-card:hover {
+      box-shadow: 0 4px 14px rgba(0,0,0,0.12);
+    }
+
+    label {
+      color: #495057;
+      font-weight: 500;
+    }
+
+    input, select, textarea {
+      border-radius: 8px !important;
+    }
+
+    .btn-primary {
+      background-color: #005098;
+      border: none;
+    }
+
+    .btn-primary:hover {
+      background-color: #003f7d;
+    }
+
+    .btn-outline-secondary {
+      border-color: #adb5bd;
+    }
+
+    .modal-content {
+      border-radius: 12px;
+    }
+
+    .modal-header {
+      background: #f8f9fa;
+    }
+
+    .fade-smooth {
+      transition: opacity 0.25s ease-in-out;
+    }
+  </style>
 </head>
-<body class="p-4">
-  <div class="container" style="max-width: 720px;">
+
+<body class="py-4 fade-smooth">
+  <div class="container">
     <h1 class="mb-4">{% if is_edit %}Editar cita{% else %}Nueva cita{% endif %}</h1>
 
-    <form method="post" action="">
+    <form method="post" action="" id="appointmentForm" class="form-card">
       {% csrf_token %}
-      <input type="hidden" name="next" value="{{ cancel_url }}"/>
+      <input type="hidden" name="next" value="{{ cancel_url }}">
 
-      {{ form.as_p }}
+      <div class="row g-3">
+        {% for field in form %}
+          {% if field.name == "client" or field.name == "staff" %}
+            <div class="col-md-6">
+          {% else %}
+            <div class="col-md-12">
+          {% endif %}
+              <label for="{{ field.id_for_label }}" class="form-label fw-semibold">{{ field.label }}</label>
+              {{ field }}
+              {% if field.errors %}
+                <div class="text-danger small mt-1">{{ field.errors|striptags }}</div>
+              {% endif %}
+            </div>
+        {% endfor %}
+      </div>
 
-      <div class="d-flex gap-2">
-        <button type="submit" class="btn btn-primary">
-          {% if is_edit %}Guardar{% else %}Crear{% endif %}
+      <div class="d-flex justify-content-end gap-2 mt-4">
+        <button type="submit" class="btn btn-primary px-4">
+          <i class="bi bi-save"></i>
+          {% if is_edit %}Guardar cambios{% else %}Crear cita{% endif %}
         </button>
-        <a href="{{ cancel_url }}" class="btn btn-outline-secondary">Cancelar</a>
+        <button type="button" id="cancelBtn" class="btn btn-outline-secondary px-4">
+          <i class="bi bi-x-circle"></i> Cancelar
+        </button>
       </div>
     </form>
   </div>
+
+  <!-- Modal de confirmación de cancelación -->
+  <div class="modal fade" id="cancelModal" tabindex="-1" aria-labelledby="cancelModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content border-0 shadow-sm rounded-3">
+        <div class="modal-header bg-light border-0">
+          <h5 class="modal-title fw-semibold text-primary" id="cancelModalLabel">
+            <i class="bi bi-question-circle me-2"></i>Cancelar edición
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+        </div>
+        <div class="modal-body">
+          ¿Desea cancelar los cambios realizados?<br>
+          Los datos no guardados se perderán.
+        </div>
+        <div class="modal-footer border-0">
+          <button type="button" class="btn btn-light" data-bs-dismiss="modal">
+            <i class="bi bi-pencil"></i> Seguir editando
+          </button>
+          <button type="button" class="btn btn-outline-danger" id="confirmCancelBtn">
+            <i class="bi bi-arrow-left-circle"></i> Salir sin guardar
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bootstrap Bundle y lógica de cancelación -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+  document.addEventListener("DOMContentLoaded", () => {
+    const form = document.getElementById("appointmentForm");
+    const cancelBtn = document.getElementById("cancelBtn");
+    const confirmCancelBtn = document.getElementById("confirmCancelBtn");
+    const cancelModal = new bootstrap.Modal(document.getElementById("cancelModal"));
+    const nextUrl = form.querySelector("input[name='next']").value || "/";
+    const initialData = new FormData(form);
+    cancelBtn.style.display = "none";
+
+    // Detectar si hay cambios en el formulario
+    form.addEventListener("input", () => {
+      const currentData = new FormData(form);
+      let changed = false;
+      for (let [key, val] of currentData.entries()) {
+        if (initialData.get(key) !== val) {
+          changed = true;
+          break;
+        }
+      }
+      cancelBtn.style.display = changed ? "inline-block" : "none";
+    });
+
+    // Mostrar modal al intentar cancelar
+    cancelBtn.addEventListener("click", () => {
+      cancelModal.show();
+    });
+
+    // Confirmar cancelación
+    confirmCancelBtn.addEventListener("click", () => {
+      window.location.href = nextUrl;
+    });
+  });
+  </script>
 </body>
 </html>
